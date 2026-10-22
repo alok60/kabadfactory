@@ -27,6 +27,7 @@ export type Category = {
   id: number;
   name: string;
   slug?: string;
+  category?: string;
   unit: string;
   price: number | string;
   iconUrl?: string;

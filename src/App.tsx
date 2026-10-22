@@ -324,28 +324,86 @@ function QuickActions({ navigate }: { navigate: (path: string) => void }) {
 
 function RatesPage({ route, navigate }: { route: RouteDef; navigate: (path: string) => void }) {
   const { categories, loading, error, reload } = useCategories();
+  const [search, setSearch] = useState("");
+  const [selectedMaterial, setSelectedMaterial] = useState("All");
+  const availableMaterials = useMemo(() => MATERIAL_CATEGORY_ORDER.filter((material) => categories.some((item) => materialCategory(item) === material)), [categories]);
+  const filteredCategories = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase();
+    return categories.filter((item) =>
+      (selectedMaterial === "All" || materialCategory(item) === selectedMaterial) &&
+      (!query || item.name.toLocaleLowerCase().includes(query))
+    );
+  }, [categories, search, selectedMaterial]);
+  const groupedCategories = useMemo(() => {
+    const groups = new Map<string, Category[]>();
+    filteredCategories.forEach((item) => {
+      const material = materialCategory(item);
+      groups.set(material, [...(groups.get(material) || []), item]);
+    });
+    return (selectedMaterial === "All" ? availableMaterials : [selectedMaterial])
+      .map((material) => ({ material, items: groups.get(material) || [] }))
+      .filter((group) => group.items.length > 0);
+  }, [availableMaterials, filteredCategories, selectedMaterial]);
+
   return (
     <>
       <PageHero route={route} action={() => navigate("/schedule-pickup")} actionLabel="Schedule Pickup" />
       <section className="container-page pb-16">
         {error && <RetryBox message={error} onRetry={reload} />}
-        <div className="card overflow-hidden">
-          <div className="grid grid-cols-[1fr_120px] gap-4 border-b border-brand-100 bg-brand-50 px-5 py-4 text-sm font-black uppercase text-brand-900">
-            <span>Scrap Item</span><span className="text-right">Rate</span>
+        <div className="mx-auto max-w-6xl">
+          <label className="relative block">
+            <span className="sr-only">Search scrap materials</span>
+            <Search className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-brand-700" size={22} />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search any materials..." className="focus-ring min-h-16 w-full rounded-2xl border border-brand-100 bg-white py-4 pl-14 pr-12 text-base font-semibold text-ink shadow-soft placeholder:text-muted" />
+            {search && <button type="button" onClick={() => setSearch("")} className="focus-ring absolute right-3 top-1/2 -translate-y-1/2 rounded-xl p-2 text-muted hover:bg-brand-50 hover:text-ink" aria-label="Clear search"><X size={20} /></button>}
+          </label>
+          <div className="mt-5 flex gap-2 overflow-x-auto pb-2" aria-label="Material categories">
+            {["All", ...availableMaterials].map((material) => (
+              <button key={material} type="button" onClick={() => setSelectedMaterial(material)} className={`focus-ring shrink-0 rounded-full px-5 py-2.5 text-sm font-extrabold transition ${selectedMaterial === material ? "bg-brand-600 text-white shadow-soft" : "bg-slate-100 text-ink hover:bg-brand-50"}`}>
+                {material}
+              </button>
+            ))}
           </div>
-          {(loading ? Array.from({ length: 8 }) : categories).map((item, index) => (
-            <div key={isCategory(item) ? item.id : index} className="grid grid-cols-[1fr_120px] items-center gap-4 border-b border-brand-50 px-5 py-4 last:border-b-0">
-              <div>
-                <h2 className="font-black text-ink">{isCategory(item) ? item.name : "Loading item"}</h2>
-                <p className="mt-1 text-sm text-muted">{isCategory(item) ? item.description || "Doorstep pickup available where serviceable." : "Fetching current rate..."}</p>
-              </div>
-              <span className="text-right text-lg font-black text-brand-700">{isCategory(item) ? formatRate(item) : "--"}</span>
+          <div className="mt-8">
+            <p className="text-sm font-black uppercase tracking-wide text-brand-700">Current rates</p>
+            <h1 className="mt-2 text-3xl font-black text-ink sm:text-4xl">{selectedMaterial === "All" ? "Scrap Items" : `${selectedMaterial} Scrap Items`}</h1>
+          </div>
+          {loading ? <RatesLoadingCards /> : groupedCategories.length ? (
+            <div className="mt-8 space-y-10">
+              {groupedCategories.map((group) => (
+                <section key={group.material} aria-labelledby={`material-${group.material}`}>
+                  <h2 id={`material-${group.material}`} className="mb-4 text-xl font-black text-ink">{group.material}</h2>
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    {group.items.map((item) => <ScrapRateCard key={item.id} item={item} />)}
+                  </div>
+                </section>
+              ))}
             </div>
-          ))}
+          ) : <div className="mt-8 rounded-card border border-dashed border-brand-200 bg-brand-50 p-8 text-center"><p className="font-black text-ink">No scrap items match your search.</p><p className="mt-2 text-sm text-muted">Try another material name or clear the search.</p>{search && <button type="button" onClick={() => setSearch("")} className="mt-4 rounded-full bg-brand-600 px-4 py-2 text-sm font-black text-white">Clear search</button>}</div>}
         </div>
       </section>
     </>
   );
+}
+
+const MATERIAL_CATEGORY_ORDER = ["Paper", "Plastic", "Metal", "E-waste", "Glass", "Rubber", "Other", "Textile"];
+
+function materialCategory(item: Category) {
+  return MATERIAL_CATEGORY_ORDER.includes(item.category || "") ? item.category! : "Other";
+}
+
+function ScrapRateCard({ item }: { item: Category }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  return <article className="flex min-h-32 items-center gap-4 rounded-card bg-slate-50 p-4 transition hover:-translate-y-0.5 hover:shadow-soft">
+    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-brand-700 shadow-sm">
+      {item.iconUrl && !imageFailed ? <img src={item.iconUrl} alt="" className="h-full w-full object-cover" onError={() => setImageFailed(true)} /> : <Recycle size={28} aria-hidden="true" />}
+    </div>
+    <div className="min-w-0"><h3 className="truncate font-black text-ink" title={item.name}>{item.name}</h3><p className="mt-1 text-lg font-black text-brand-700">{formatRate(item)}</p></div>
+  </article>;
+}
+
+function RatesLoadingCards() {
+  return <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 8 }).map((_, index) => <div key={index} className="h-32 animate-pulse rounded-card bg-brand-50" />)}</div>;
 }
 
 function SchedulePickupPage({ navigate }: { navigate: (path: string) => void }) {
@@ -1314,7 +1372,8 @@ function isCategory(value: unknown): value is Category {
 }
 
 function formatRate(item: Category) {
-  return `₹${Number(item.price || 0).toFixed(0)}/${item.unit || "kg"}`;
+  const unit = item.unit === "piece" ? "pcs" : item.unit || "kg";
+  return `₹${Number(item.price || 0).toFixed(0)}/${unit}`;
 }
 
 function hrefLabel(href: string) {
