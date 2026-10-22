@@ -1,7 +1,8 @@
 export const siteConfig = {
   name: "Kabad Factory",
   domain: "https://www.kabadfactory.com",
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || "http://localhost:4000/api",
+  apiBaseUrl:
+    import.meta.env.VITE_API_BASE_URL || "https://api.kabadfactory.com/api",
   phone: "+91 8319060820",
   phonePlain: "918319060820",
   email: "contact@kabadfactory.com",
@@ -11,10 +12,12 @@ export const siteConfig = {
   region: "Madhya Pradesh",
   hours: "Mon-Sat: 9:00 AM - 8:00 PM",
   whatsappMessage: "Hi, I want to sell scrap online with Kabad Factory.",
-  appDownloadUrl: import.meta.env.VITE_APP_DOWNLOAD_URL || "https://play.google.com/store/apps/details?id=com.kabadfactory.app",
+  appDownloadUrl:
+    import.meta.env.VITE_APP_DOWNLOAD_URL ||
+    "https://play.google.com/store/apps/details?id=com.kabadfactory.app",
   assets: {
     heroBanner: "/assets/kabad-hero-banner.png",
     appMockup: "/assets/kabad-app-mockup.png",
-    logo: "/assets/kabad-factory-logo.png"
-  }
+    logo: "/assets/kabad-factory-logo.png",
+  },
 };
