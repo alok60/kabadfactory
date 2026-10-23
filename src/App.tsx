@@ -113,7 +113,7 @@ function SiteFrame({ route, navigate, children }: { route: RouteDef; navigate: (
               <span className="text-xs font-semibold uppercase tracking-wide text-brand-700">Innovators of Recycling</span>
             </span>
           </a>
-          <nav className="hidden items-center gap-5 text-[0.92rem] font-bold text-muted xl:flex">
+          <nav className="hidden items-center gap-5 text-[0.85rem] font-bold text-muted xl:flex">
             {navLinks.map((link) => (
               <a key={link.href} href={link.href} onClick={(event) => linkClick(event, link.href, navigate)} className={`nav-link hover:text-ink ${route.path === link.href ? "text-ink" : ""}`}>{link.label}</a>
             ))}
@@ -163,6 +163,7 @@ function PageRouter({ route, navigate, currentPath }: { route: RouteDef; navigat
   if (route.kind === "home") return <HomePage navigate={navigate} />;
   if (route.kind === "rates") return <RatesPage route={route} navigate={navigate} />;
   if (route.kind === "schedule") return <SchedulePickupPage navigate={navigate} />;
+  if (route.kind === "appComingSoon") return <AppComingSoonPage navigate={navigate} />;
   if (route.kind === "auth") return <AuthPage mode={route.path === "/register" ? "register" : "login"} navigate={navigate} currentPath={currentPath} />;
   if (route.kind === "account") return <AccountPage route={route} navigate={navigate} />;
   if (route.kind === "scrap") return <ScrapPage route={route} navigate={navigate} />;
@@ -347,7 +348,7 @@ function RatesPage({ route, navigate }: { route: RouteDef; navigate: (path: stri
 
   return (
     <>
-      <PageHero route={route} action={() => navigate("/schedule-pickup")} actionLabel="Schedule Pickup" />
+      <PageHero route={route} />
       <section className="container-page pb-16">
         {error && <RetryBox message={error} onRetry={reload} />}
         <div className="mx-auto max-w-6xl">
@@ -384,6 +385,26 @@ function RatesPage({ route, navigate }: { route: RouteDef; navigate: (path: stri
       </section>
     </>
   );
+}
+
+function AppComingSoonPage({ navigate }: { navigate: (path: string) => void }) {
+  return <section className="container-page flex min-h-[calc(100vh-76px)] items-center py-12">
+    <div className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-card border border-brand-100 bg-white shadow-lift lg:grid-cols-[1fr_0.9fr]">
+      <div className="p-8 sm:p-12">
+        <img src={siteConfig.assets.logo} alt="Kabad Factory" className="h-16 w-52 object-contain object-left" />
+        <p className="mt-10 text-sm font-black uppercase tracking-wide text-brand-700">Kabad Factory app</p>
+        <h1 className="mt-3 text-4xl font-black leading-tight text-ink sm:text-5xl">Our Mobile App Is Coming Soon!</h1>
+        <p className="mt-5 max-w-xl text-lg leading-8 text-muted">We're working on a better way to manage your scrap pickups. Our mobile app is coming soon.</p>
+        <div className="mt-7 flex flex-wrap gap-3"><span className="rounded-full bg-brand-50 px-4 py-2 text-sm font-black text-brand-700">Android in development</span><span className="rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-ink">iOS in development</span></div>
+        <div className="mt-9 flex flex-col gap-3 sm:flex-row"><button onClick={() => navigate("/")} className="rounded-full bg-brand-600 px-6 py-3 font-black text-white shadow-soft">Return to homepage</button><a href={`mailto:${siteConfig.email}`} className="rounded-full border border-brand-100 px-6 py-3 text-center font-black text-brand-700">Contact support</a></div>
+      </div>
+      <div className="relative flex min-h-72 items-center justify-center overflow-hidden bg-brand-50 p-10">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(34,197,94,0.25),_transparent_55%)]" />
+        <div className="relative grid h-56 w-36 place-items-center rounded-[2.5rem] border-8 border-ink bg-white shadow-lift"><Recycle size={68} className="text-brand-600" /><span className="absolute bottom-7 text-xs font-black text-brand-700">RECYCLE</span></div>
+        <Smartphone className="absolute bottom-10 right-10 text-brand-700/30" size={88} aria-hidden="true" />
+      </div>
+    </div>
+  </section>;
 }
 
 const MATERIAL_CATEGORY_ORDER = ["Paper", "Plastic", "Metal", "E-waste", "Glass", "Rubber", "Other", "Textile"];
@@ -424,8 +445,16 @@ function SchedulePickupPage({ navigate }: { navigate: (path: string) => void }) 
   const [savingAddress, setSavingAddress] = useState(false);
   const [loading, setLoading] = useState(false);
   const [successCharge, setSuccessCharge] = useState<number | null>(null);
+  const [itemSearch, setItemSearch] = useState("");
+  const [selectedMaterial, setSelectedMaterial] = useState("All");
 
   const activeCategories = useMemo(() => categories.filter((item: Category & { isActive?: boolean; status?: string }) => item.isActive !== false && item.status !== "Hidden"), [categories]);
+  const availableMaterials = useMemo(() => MATERIAL_CATEGORY_ORDER.filter((material) => activeCategories.some((item) => materialCategory(item) === material)), [activeCategories]);
+  const visibleCategories = useMemo(() => {
+    const query = itemSearch.trim().toLocaleLowerCase();
+    return activeCategories.filter((item) => (selectedMaterial === "All" || materialCategory(item) === selectedMaterial) && (!query || item.name.toLocaleLowerCase().includes(query)));
+  }, [activeCategories, itemSearch, selectedMaterial]);
+  const visibleGroups = useMemo(() => (selectedMaterial === "All" ? availableMaterials.map((material) => ({ material, items: visibleCategories.filter((item) => materialCategory(item) === material) })).filter((group) => group.items.length) : [{ material: selectedMaterial, items: visibleCategories }]), [availableMaterials, selectedMaterial, visibleCategories]);
   const selectedAddress = addresses.find((item) => item.id === selectedAddressId) || null;
   const selectedItems = useMemo(() => selected.map((categoryId) => ({ categoryId, estimatedQuantity: estimateQuantity(weightRange) })), [selected, weightRange]);
   const quickDates = useMemo(() => nextDates(14), []);
@@ -573,16 +602,17 @@ function SchedulePickupPage({ navigate }: { navigate: (path: string) => void }) 
           <section className="card reveal-up p-5">
             <SectionHeader icon={<Truck />} title="Select Items" error={errors.items} />
             <p className="mt-2 text-sm text-muted">Raddi ho ya loha, plastic ho ya purana samaan - Kabad Factory sab le jayega.</p>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {(categoriesLoading && !activeCategories.length ? Array.from({ length: 6 }) : activeCategories).map((item, index) => (
-                isCategory(item) ? (
-                  <button key={item.id} onClick={() => setSelected((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])} className={`group flex min-h-24 items-center justify-between rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 ${selected.includes(item.id) ? "border-brand-500 bg-brand-50 shadow-soft" : "border-brand-100 bg-white hover:border-brand-200"}`} aria-pressed={selected.includes(item.id)}>
-                    <span><strong className="block text-ink">{item.name}</strong><span className="text-sm text-muted">{formatRate(item)}</span></span>
-                    {selected.includes(item.id) && <CheckCircle2 className="text-brand-600" />}
-                  </button>
-                ) : <div key={index} className="h-24 animate-pulse rounded-2xl bg-brand-50" />
-              ))}
+            <label className="relative mt-5 block">
+              <span className="sr-only">Search scrap materials</span>
+              <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-brand-700" size={19} />
+              <input value={itemSearch} onChange={(event) => setItemSearch(event.target.value)} placeholder="Search any materials..." className="focus-ring min-h-12 w-full rounded-2xl border border-brand-100 bg-brand-50 py-3 pl-11 pr-11 text-sm font-semibold text-ink placeholder:text-muted" />
+              {itemSearch && <button type="button" onClick={() => setItemSearch("")} aria-label="Clear search" className="focus-ring absolute right-2 top-1/2 -translate-y-1/2 rounded-xl p-2 text-muted hover:bg-white"><X size={18} /></button>}
+            </label>
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-2" aria-label="Material categories">
+              {["All", ...availableMaterials].map((material) => <button key={material} type="button" onClick={() => setSelectedMaterial(material)} className={`focus-ring shrink-0 rounded-full px-4 py-2 text-sm font-extrabold ${selectedMaterial === material ? "bg-brand-600 text-white" : "bg-slate-100 text-ink hover:bg-brand-50"}`}>{material}</button>)}
             </div>
+            {categoriesLoading && !activeCategories.length ? <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-24 animate-pulse rounded-2xl bg-brand-50" />)}</div> : <div className="mt-5 space-y-6">{visibleGroups.map((group) => <div key={group.material}><h3 className="mb-3 font-black text-ink">{group.material}</h3><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{group.items.map((item) => <ScheduleCategoryItem key={item.id} item={item} selected={selected.includes(item.id)} onToggle={() => setSelected((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])} />)}</div></div>)}</div>}
+            {!categoriesLoading && !visibleCategories.length && <p className="mt-5 rounded-2xl bg-brand-50 p-4 text-sm font-bold text-muted">No scrap items match your search. Try another material name or category.</p>}
           </section>
 
           <section className="card reveal-up p-5">
@@ -676,6 +706,14 @@ function SchedulePickupPage({ navigate }: { navigate: (path: string) => void }) 
       )}
     </PageShell>
   );
+}
+
+function ScheduleCategoryItem({ item, selected, onToggle }: { item: Category; selected: boolean; onToggle: () => void }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  return <button onClick={onToggle} className={`group flex min-h-24 items-center justify-between gap-3 rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 ${selected ? "border-brand-500 bg-brand-50 shadow-soft" : "border-brand-100 bg-white hover:border-brand-200"}`} aria-pressed={selected}>
+    <span className="flex min-w-0 items-center gap-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-50 text-brand-700">{item.iconUrl && !imageFailed ? <img src={item.iconUrl} alt="" className="h-full w-full object-cover" onError={() => setImageFailed(true)} /> : <Recycle size={20} />}</span><span className="min-w-0"><strong className="block truncate text-ink">{item.name}</strong><span className="text-sm text-muted">{formatRate(item)}</span></span></span>
+    {selected && <CheckCircle2 className="shrink-0 text-brand-600" />}
+  </button>;
 }
 
 function AuthPage({ mode, navigate, currentPath }: { mode: "login" | "register"; navigate: (path: string) => void; currentPath: string }) {
@@ -1027,7 +1065,7 @@ function AppDownloadSection({ navigate }: { navigate: (path: string) => void }) 
           </div>
           <div className="mt-7 flex max-w-sm items-center gap-4 rounded-2xl border border-brand-100 bg-brand-50 p-4">
             <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-white text-brand-700"><QrCode size={46} /></div>
-            <p className="text-sm font-bold text-muted">Scan from desktop or tap the button to open the configured Google Play download page.</p>
+            <p className="text-sm font-bold text-muted">Our Android and iOS apps are in development. Tap Get the App for the latest availability information.</p>
           </div>
         </div>
         <div className="relative min-h-[360px] bg-brand-50">

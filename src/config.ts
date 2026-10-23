@@ -12,9 +12,7 @@ export const siteConfig = {
   region: "Madhya Pradesh",
   hours: "Mon-Sat: 9:00 AM - 8:00 PM",
   whatsappMessage: "Hi, I want to sell scrap online with Kabad Factory.",
-  appDownloadUrl:
-    import.meta.env.VITE_APP_DOWNLOAD_URL ||
-    "https://play.google.com/store/apps/details?id=com.kabadfactory.app",
+  appDownloadUrl: "/app-coming-soon",
   assets: {
     heroBanner: "/assets/kabad-hero-banner.png",
     appMockup: "/assets/kabad-app-mockup.png",

@@ -25,7 +25,7 @@ export type SeoMeta = {
 export type RouteDef = {
   path: string;
   label: string;
-  kind: "home" | "rates" | "schedule" | "auth" | "account" | "content" | "scrap" | "service" | "servicesIndex" | "city" | "blog" | "faq" | "legal" | "notFound";
+  kind: "home" | "rates" | "schedule" | "auth" | "account" | "content" | "scrap" | "service" | "servicesIndex" | "city" | "blog" | "faq" | "legal" | "appComingSoon" | "notFound";
   seo: SeoMeta;
   h1?: string;
   intro?: string;
@@ -192,6 +192,17 @@ export const routes: RouteDef[] = [
       canonical: "/schedule-pickup"
     },
     h1: "Schedule Scrap Pickup"
+  },
+  {
+    path: "/app-coming-soon",
+    label: "App Coming Soon",
+    kind: "appComingSoon",
+    seo: {
+      title: "Kabad Factory Mobile App Coming Soon",
+      description: "The Kabad Factory Android and iOS mobile apps are currently under development.",
+      canonical: "/app-coming-soon"
+    },
+    h1: "Our Mobile App Is Coming Soon!"
   },
   {
     path: "/gwalior",

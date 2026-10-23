@@ -17,6 +17,7 @@ const routePaths = [
   "/how-it-works",
   "/scrap-rates",
   "/schedule-pickup",
+  "/app-coming-soon",
   "/gwalior",
   "/gwalior/scrap-rates",
   "/blog",
