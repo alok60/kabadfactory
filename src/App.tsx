@@ -102,10 +102,10 @@ function SiteFrame({ route, navigate, children }: { route: RouteDef; navigate: (
   return (
     <div>
       <a className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2" href="#main">Skip to content</a>
-      <header className="sticky top-0 z-40 border-b border-line bg-white/[0.92] backdrop-blur-xl">
-        <div className="container-page flex min-h-[76px] items-center justify-between gap-5">
-          <a href="/" onClick={(event) => linkClick(event, "/", navigate)} className="flex items-center gap-3">
-            <span className="flex h-14 w-40 items-center justify-center xl:w-44">
+      <header className="sticky top-0 z-40 border-b border-line bg-white shadow-sm lg:bg-white/[0.92] lg:shadow-none lg:backdrop-blur-xl">
+        <div className="container-page flex min-h-[68px] items-center justify-between gap-3 sm:min-h-[76px] sm:gap-5">
+          <a href="/" onClick={(event) => linkClick(event, "/", navigate)} className="flex min-w-0 items-center gap-3">
+            <span className="flex h-12 w-36 shrink-0 items-center justify-center rounded-lg bg-white px-1 sm:h-14 sm:w-40 xl:w-44">
               <img src={siteConfig.assets.logo} alt="Kabad Factory" className="h-full w-full object-contain" />
             </span>
             <span className="sr-only">
@@ -134,16 +134,16 @@ function SiteFrame({ route, navigate, children }: { route: RouteDef; navigate: (
             )}
             <a href="/schedule-pickup" onClick={(event) => linkClick(event, "/schedule-pickup", navigate)} className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-extrabold text-white shadow-soft hover:-translate-y-0.5 hover:bg-brand-700 hover:shadow-lift">Schedule Pickup</a>
           </div>
-          <button className="rounded-xl border border-line bg-white p-2 text-ink lg:hidden" onClick={() => setOpen(true)} aria-label="Open menu">
+          <button className="shrink-0 rounded-xl border border-line bg-white p-2 text-ink shadow-sm lg:hidden" onClick={() => setOpen(true)} aria-label="Open menu">
             <Menu />
           </button>
         </div>
         {open && (
-          <div className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm lg:hidden">
-            <div className="ml-auto flex h-full w-80 max-w-[88vw] flex-col gap-2 bg-white p-5 shadow-lift">
+          <div className="fixed inset-0 z-50 bg-ink/55 lg:hidden" onClick={() => setOpen(false)}>
+            <div className="ml-auto flex h-full w-80 max-w-[88vw] flex-col gap-2 overflow-y-auto border-l border-brand-100 bg-white p-5 text-ink shadow-2xl" onClick={(event) => event.stopPropagation()}>
               <div className="mb-3 flex items-center justify-between">
-                <img src={siteConfig.assets.logo} alt="Kabad Factory" className="h-12 w-36 object-contain" />
-                <button className="rounded-xl border border-line p-2 text-ink" onClick={() => setOpen(false)} aria-label="Close menu"><X /></button>
+                <span className="flex h-12 w-36 items-center rounded-lg bg-white px-1"><img src={siteConfig.assets.logo} alt="Kabad Factory" className="h-full w-full object-contain" /></span>
+                <button className="rounded-xl border border-line bg-white p-2 text-ink shadow-sm" onClick={() => setOpen(false)} aria-label="Close menu"><X /></button>
               </div>
               {[...navLinks, { href: siteConfig.appDownloadUrl, label: "Get the App" }, { href: session ? "/account" : "/login", label: session ? "Account" : "Login" }].map((link) => (
                 <a key={link.href} href={link.href} onClick={(event) => { linkClick(event, link.href, navigate); setOpen(false); }} className="rounded-xl px-3 py-3 font-extrabold text-ink hover:bg-brand-50">{link.label}</a>
