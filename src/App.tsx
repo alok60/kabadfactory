@@ -327,7 +327,7 @@ function RatesPage({ route, navigate }: { route: RouteDef; navigate: (path: stri
   const { categories, loading, error, reload } = useCategories();
   const [search, setSearch] = useState("");
   const [selectedMaterial, setSelectedMaterial] = useState("All");
-  const availableMaterials = useMemo(() => MATERIAL_CATEGORY_ORDER.filter((material) => categories.some((item) => materialCategory(item) === material)), [categories]);
+  const availableMaterials = MATERIAL_CATEGORY_ORDER;
   const filteredCategories = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
     return categories.filter((item) =>
@@ -445,11 +445,12 @@ function SchedulePickupPage({ navigate }: { navigate: (path: string) => void }) 
   const [savingAddress, setSavingAddress] = useState(false);
   const [loading, setLoading] = useState(false);
   const [successCharge, setSuccessCharge] = useState<number | null>(null);
+  const [successBooking, setSuccessBooking] = useState<{ id: number; date: string; slot: string; address: string; items: string[] } | null>(null);
   const [itemSearch, setItemSearch] = useState("");
   const [selectedMaterial, setSelectedMaterial] = useState("All");
 
   const activeCategories = useMemo(() => categories.filter((item: Category & { isActive?: boolean; status?: string }) => item.isActive !== false && item.status !== "Hidden"), [categories]);
-  const availableMaterials = useMemo(() => MATERIAL_CATEGORY_ORDER.filter((material) => activeCategories.some((item) => materialCategory(item) === material)), [activeCategories]);
+  const availableMaterials = MATERIAL_CATEGORY_ORDER;
   const visibleCategories = useMemo(() => {
     const query = itemSearch.trim().toLocaleLowerCase();
     return activeCategories.filter((item) => (selectedMaterial === "All" || materialCategory(item) === selectedMaterial) && (!query || item.name.toLocaleLowerCase().includes(query)));
@@ -549,7 +550,7 @@ function SchedulePickupPage({ navigate }: { navigate: (path: string) => void }) 
 
     setLoading(true);
     try {
-      const booking = await apiFetch<{ pickup: { pickupCharge: number } }>("/bookings", {
+      const booking = await apiFetch<{ pickup: { id?: number; pickupCharge: number } }>("/bookings", {
         method: "POST",
         token: session.token,
         body: JSON.stringify({
@@ -563,6 +564,7 @@ function SchedulePickupPage({ navigate }: { navigate: (path: string) => void }) 
       });
       const charge = Number(booking.pickup?.pickupCharge || 0);
       setPickupCharge(charge);
+      setSuccessBooking({ id: booking.pickup?.id || 0, date: pickupDate, slot: timeSlot, address: selectedAddress ? formatAddress(selectedAddress) : "", items: selected.map((id) => activeCategories.find((item) => item.id === id)?.name || "Scrap item") });
       setSuccessCharge(charge);
       resetForm();
     } catch (err) {
@@ -589,17 +591,17 @@ function SchedulePickupPage({ navigate }: { navigate: (path: string) => void }) 
 
   return (
     <PageShell title="Schedule Scrap Pickup" subtitle="Select items, estimated weight, saved address, pickup charge, date, and slot. The same backend creates your pickup as the mobile app.">
-      <div className="mb-7 grid gap-3 md:grid-cols-6">
+      <div className="mb-5 grid gap-2 md:grid-cols-6">
         {["Select Items", "Weight", "Pickup Address", "Pickup Charge", "Date / Time", "Review"].map((step, index) => (
-          <div key={step} className={`rounded-2xl border px-4 py-3 text-sm font-black transition ${scheduleStepComplete(index, { selected, weightRange, selectedAddressId, pickupCharge, pickupDate, timeSlot }) ? "border-brand-500 bg-brand-50 text-brand-700" : "border-brand-100 bg-white text-muted"}`}>
-            <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs">{index + 1}</span>{step}
+          <div key={step} className={`min-w-0 rounded-2xl border px-3 py-2 text-xs font-black transition sm:text-sm ${scheduleStepComplete(index, { selected, weightRange, selectedAddressId, pickupCharge, pickupDate, timeSlot }) ? "border-brand-500 bg-brand-50 text-brand-700" : "border-brand-100 bg-white text-muted"}`}>
+            <span className="mr-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white text-[11px]">{index + 1}</span>{step}
           </div>
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_390px]">
-        <div className="space-y-6">
-          <section className="card reveal-up p-5">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:gap-5">
+        <div className="min-w-0 space-y-4">
+          <section className="card reveal-up min-w-0 p-4 sm:p-5">
             <SectionHeader icon={<Truck />} title="Select Items" error={errors.items} />
             <p className="mt-2 text-sm text-muted">Raddi ho ya loha, plastic ho ya purana samaan - Kabad Factory sab le jayega.</p>
             <label className="relative mt-5 block">
@@ -608,14 +610,14 @@ function SchedulePickupPage({ navigate }: { navigate: (path: string) => void }) 
               <input value={itemSearch} onChange={(event) => setItemSearch(event.target.value)} placeholder="Search any materials..." className="focus-ring min-h-12 w-full rounded-2xl border border-brand-100 bg-brand-50 py-3 pl-11 pr-11 text-sm font-semibold text-ink placeholder:text-muted" />
               {itemSearch && <button type="button" onClick={() => setItemSearch("")} aria-label="Clear search" className="focus-ring absolute right-2 top-1/2 -translate-y-1/2 rounded-xl p-2 text-muted hover:bg-white"><X size={18} /></button>}
             </label>
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-2" aria-label="Material categories">
+            <div className="mt-4 flex max-w-full gap-2 overflow-x-auto pb-2" aria-label="Material categories">
               {["All", ...availableMaterials].map((material) => <button key={material} type="button" onClick={() => setSelectedMaterial(material)} className={`focus-ring shrink-0 rounded-full px-4 py-2 text-sm font-extrabold ${selectedMaterial === material ? "bg-brand-600 text-white" : "bg-slate-100 text-ink hover:bg-brand-50"}`}>{material}</button>)}
             </div>
-            {categoriesLoading && !activeCategories.length ? <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-24 animate-pulse rounded-2xl bg-brand-50" />)}</div> : <div className="mt-5 space-y-6">{visibleGroups.map((group) => <div key={group.material}><h3 className="mb-3 font-black text-ink">{group.material}</h3><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{group.items.map((item) => <ScheduleCategoryItem key={item.id} item={item} selected={selected.includes(item.id)} onToggle={() => setSelected((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])} />)}</div></div>)}</div>}
+            {categoriesLoading && !activeCategories.length ? <div className="mt-4 grid gap-2 sm:grid-cols-2 2xl:grid-cols-4">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-20 animate-pulse rounded-2xl bg-brand-50" />)}</div> : <div className="mt-4 space-y-5">{visibleGroups.map((group) => <div key={group.material}><h3 className="mb-2 font-black text-ink">{group.material}</h3><div className="grid min-w-0 gap-2 sm:grid-cols-2 2xl:grid-cols-4">{group.items.map((item) => <ScheduleCategoryItem key={item.id} item={item} selected={selected.includes(item.id)} onToggle={() => setSelected((current) => current.includes(item.id) ? current.filter((id) => id !== item.id) : [...current, item.id])} />)}</div></div>)}</div>}
             {!categoriesLoading && !visibleCategories.length && <p className="mt-5 rounded-2xl bg-brand-50 p-4 text-sm font-bold text-muted">No scrap items match your search. Try another material name or category.</p>}
           </section>
 
-          <section className="card reveal-up p-5">
+          <section className="card reveal-up min-w-0 p-4 sm:p-5">
             <SectionHeader icon={<WalletCards />} title="Estimated Weight / Quantity" error={errors.weightRange} />
             <div className="mt-4 flex flex-wrap gap-2">
               {weightRanges.map((range) => (
@@ -624,7 +626,7 @@ function SchedulePickupPage({ navigate }: { navigate: (path: string) => void }) 
             </div>
           </section>
 
-          <section className="card reveal-up p-5">
+          <section className="card reveal-up min-w-0 p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <SectionHeader icon={<MapPinned />} title="Saved Address" error={errors.address} />
               <button onClick={() => setShowAddressForm(true)} className="inline-flex items-center gap-2 rounded-full border border-brand-100 px-4 py-2 text-sm font-black text-brand-700"><Plus size={16} /> Add Address</button>
@@ -632,20 +634,7 @@ function SchedulePickupPage({ navigate }: { navigate: (path: string) => void }) 
             {pageLoading ? (
               <div className="mt-4 h-28 animate-pulse rounded-2xl bg-brand-50" />
             ) : addresses.length > 0 ? (
-              <div className="mt-4 grid gap-3">
-                {addresses.map((item) => (
-                  <button key={item.id} onClick={() => setSelectedAddressId(item.id)} className={`flex items-start justify-between gap-4 rounded-2xl border p-4 text-left transition ${selectedAddressId === item.id ? "border-brand-500 bg-brand-50 shadow-soft" : "border-brand-100 bg-white hover:border-brand-200"}`} aria-pressed={selectedAddressId === item.id}>
-                    <span>
-                      <strong className="block text-ink">{humanize(item.label)}</strong>
-                      <span className="mt-1 block text-sm leading-6 text-muted">{formatAddress(item)}</span>
-                      <span className="mt-2 block text-sm font-black text-ink">{item.fullName} | {item.mobile}</span>
-                    </span>
-                    <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ${item.isDefault || selectedAddressId === item.id ? "bg-brand-600 text-white" : "bg-brand-50 text-brand-700"}`}>
-                      {selectedAddressId === item.id ? "Selected" : item.isDefault ? "Default" : "Use"}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              <div className="mt-4 min-w-0"><label className="sr-only" htmlFor="pickup-address">Saved pickup address</label><select id="pickup-address" value={selectedAddressId || ""} onChange={(event) => setSelectedAddressId(Number(event.target.value) || null)} className="focus-ring min-h-12 w-full min-w-0 rounded-2xl border border-brand-100 bg-white px-3 text-sm font-bold text-ink">{addresses.map((item) => <option key={item.id} value={item.id}>{`${humanize(item.label)}${item.isDefault ? " (Default)" : ""} — ${formatAddress(item)}`}</option>)}</select>{selectedAddress && <div className="mt-3 min-w-0 rounded-2xl bg-brand-50 p-3"><strong className="text-ink">{humanize(selectedAddress.label)}{selectedAddress.isDefault ? " · Default" : ""}</strong><p className="mt-1 break-words text-sm leading-6 text-muted">{formatAddress(selectedAddress)}</p><p className="mt-1 text-sm font-bold text-ink">{selectedAddress.fullName} | {selectedAddress.mobile}</p></div>}</div>
             ) : (
               <div className="mt-4 rounded-2xl border border-dashed border-brand-200 bg-brand-50 p-4">
                 <p className="font-black text-ink">No saved address found</p>
@@ -658,7 +647,7 @@ function SchedulePickupPage({ navigate }: { navigate: (path: string) => void }) 
             )}
           </section>
 
-          <section className="card reveal-up p-5">
+          <section className="card reveal-up min-w-0 p-4 sm:p-5">
             <SectionHeader icon={<CalendarDays />} title="Pickup Date / Time" error={errors.pickupDate || errors.timeSlot} />
             <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
               {quickDates.map((date) => (
@@ -677,8 +666,8 @@ function SchedulePickupPage({ navigate }: { navigate: (path: string) => void }) 
           </section>
         </div>
 
-        <aside className="lg:sticky lg:top-24 lg:self-start">
-          <div className="card p-5">
+        <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
+          <div className="card min-w-0 p-4 sm:p-5">
             <h2 className="text-xl font-black text-ink">Review Pickup</h2>
             <div className="mt-4 space-y-4 text-sm">
               <ReviewRow label="Items" value={selected.length ? `${selected.length} selected` : "Select scrap items"} />
@@ -699,8 +688,9 @@ function SchedulePickupPage({ navigate }: { navigate: (path: string) => void }) 
           <div className="success-pop max-w-md card p-7 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 text-brand-700"><CheckCircle2 size={34} /></div>
             <h2 id="success-title" className="mt-5 text-2xl font-black text-ink">Pickup scheduled successfully</h2>
+            {successBooking && <div className="mt-4 rounded-2xl bg-brand-50 p-4 text-left text-sm"><p className="font-black text-brand-700">Booking reference: #KF{successBooking.id}</p><p className="mt-2 text-muted">{readableDate(successBooking.date)} · {successBooking.slot}</p><p className="mt-1 text-muted">{successBooking.address}</p><p className="mt-2 font-bold text-ink">{successBooking.items.join(", ")}</p></div>}
             <p className="mt-2 font-bold text-muted">Pickup Charge: {successCharge > 0 ? `₹${successCharge.toFixed(0)}` : "Free"}</p>
-            <button onClick={() => { setSuccessCharge(null); navigate("/"); }} className="mt-6 w-full rounded-2xl bg-brand-600 px-5 py-3 font-black text-white">OK</button>
+            <button onClick={() => { setSuccessCharge(null); setSuccessBooking(null); navigate("/orders"); }} className="mt-6 w-full rounded-2xl bg-brand-600 px-5 py-3 font-black text-white">View bookings</button>
           </div>
         </div>
       )}
@@ -710,8 +700,8 @@ function SchedulePickupPage({ navigate }: { navigate: (path: string) => void }) 
 
 function ScheduleCategoryItem({ item, selected, onToggle }: { item: Category; selected: boolean; onToggle: () => void }) {
   const [imageFailed, setImageFailed] = useState(false);
-  return <button onClick={onToggle} className={`group flex min-h-24 items-center justify-between gap-3 rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 ${selected ? "border-brand-500 bg-brand-50 shadow-soft" : "border-brand-100 bg-white hover:border-brand-200"}`} aria-pressed={selected}>
-    <span className="flex min-w-0 items-center gap-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-50 text-brand-700">{item.iconUrl && !imageFailed ? <img src={item.iconUrl} alt="" className="h-full w-full object-cover" onError={() => setImageFailed(true)} /> : <Recycle size={20} />}</span><span className="min-w-0"><strong className="block truncate text-ink">{item.name}</strong><span className="text-sm text-muted">{formatRate(item)}</span></span></span>
+  return <button onClick={onToggle} className={`group flex min-w-0 items-center justify-between gap-2 rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${selected ? "border-brand-500 bg-brand-50 shadow-soft" : "border-brand-100 bg-white hover:border-brand-200"}`} aria-pressed={selected}>
+    <span className="flex min-w-0 items-center gap-2"><span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-50 text-brand-700">{item.iconUrl && !imageFailed ? <img src={item.iconUrl} alt="" className="h-full w-full object-cover" onError={() => setImageFailed(true)} /> : <Recycle size={18} />}</span><span className="min-w-0"><strong className="block break-words text-sm leading-tight text-ink">{item.name}</strong><span className="mt-1 block text-xs text-muted">{formatRate(item)}</span></span></span>
     {selected && <CheckCircle2 className="shrink-0 text-brand-600" />}
   </button>;
 }
